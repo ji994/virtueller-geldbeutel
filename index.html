@@ -80,7 +80,9 @@
       const amount = parseFloat(document.getElementById('expenseAmount').value);
       if (!isNaN(amount) && amount > 0 && balance - amount >= 0) {
         balance -= amount;
-        expenses.push(amount);
+        const now = new Date();
+        const timestamp = now.toLocaleString();
+        expenses.push({ amount: amount, time: timestamp });
         saveToStorage();
         updateDisplay();
       }
@@ -92,7 +94,7 @@
       list.innerHTML = '';
       expenses.forEach((ex, idx) => {
         const li = document.createElement('li');
-        li.textContent = `#${idx + 1}: -${ex.toFixed(2)} €`;
+        li.textContent = `#${idx + 1}: -${ex.amount.toFixed(2)} € am ${ex.time}`;
         list.appendChild(li);
       });
     }
