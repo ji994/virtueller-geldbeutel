@@ -58,6 +58,7 @@
 <div class="container" id="walletView" style="display:none">
   <h1 id="walletTitle"></h1>
   <div id="balance">Verfügbar: 0 €</div>
+  <input type="text" id="expenseTitle" placeholder="Titel der Ausgabe">
   <input type="number" id="expenseAmount" placeholder="Ausgabe hinzufügen (€)">
   <button onclick="addExpenseToCurrentWallet()">Ausgabe speichern</button>
   <h3>Ausgaben</h3>
@@ -95,6 +96,7 @@ function renderWalletList() {
       <span onclick="openWallet(${index})">${wallet.name} (${wallet.balance.toFixed(2)} €)</span>
       <span class="wallet-controls">
         <button onclick="editWallet(${index})">⚙️</button>
+        <button onclick="deleteWallet(${index})">🗑️</button>
       </span>`;
     list.appendChild(item);
   });
@@ -107,6 +109,14 @@ function editWallet(index) {
   if (newName && !isNaN(newBalance)) {
     wallet.name = newName;
     wallet.balance = newBalance;
+    saveWallets();
+    renderWalletList();
+  }
+}
+
+function deleteWallet(index) {
+  if (confirm("Möchtest du diesen Geldbeutel wirklich löschen?")) {
+    wallets.splice(index, 1);
     saveWallets();
     renderWalletList();
   }
@@ -128,19 +138,20 @@ function updateWalletView() {
   list.innerHTML = '';
   wallet.expenses.forEach((ex, idx) => {
     const li = document.createElement('li');
-    li.textContent = `#${idx + 1}: -${ex.amount.toFixed(2)} € am ${ex.time}`;
+    li.textContent = `${idx + 1}.: ${ex.title} (${ex.time})`;
     list.appendChild(li);
   });
 }
 
 function addExpenseToCurrentWallet() {
   const amount = parseFloat(document.getElementById('expenseAmount').value);
+  const title = document.getElementById('expenseTitle').value || 'Ausgabe';
   if (!isNaN(amount) && amount > 0) {
     const wallet = wallets[currentWalletIndex];
     if (wallet.balance - amount >= 0) {
       wallet.balance -= amount;
       const now = new Date();
-      wallet.expenses.push({ amount: amount, time: now.toLocaleString() });
+      wallet.expenses.push({ amount: amount, title: title, time: now.toLocaleString() });
       saveWallets();
       updateWalletView();
     }
