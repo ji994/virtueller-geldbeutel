@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <title>Mein Geldbeutel</title>
+  <title>Geldbeutel App</title>
   <style>
     body {
       font-family: sans-serif;
@@ -21,8 +21,22 @@
       border-radius: 20px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    h1 { margin-bottom: 0.5em; }
-    #balance { font-size: 2em; color: #2d6a4f; margin-bottom: 1em; }
+    .wallet-button {
+      padding: 0.5em;
+      margin: 0.5em;
+      width: 100%;
+      font-size: 1em;
+    }
+    .wallet-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5em;
+      border-bottom: 1px solid #ccc;
+    }
+    .wallet-controls button {
+      margin-left: 0.5em;
+    }
     input, button {
       font-size: 1em;
       padding: 0.5em;
@@ -35,71 +49,112 @@
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Virtueller Geldbeutel</h1>
-    <div id="balance">Verfügbar: 0 €</div>
+<div class="container" id="mainMenu">
+  <h1>Geldbeutel Übersicht</h1>
+  <div id="walletList"></div>
+  <button onclick="createWallet()">+ Neuer Geldbeutel</button>
+</div>
 
-    <input type="number" id="startAmount" placeholder="Startbetrag festlegen (€)">
-    <button onclick="setStartAmount()">Startbetrag setzen</button>
+<div class="container" id="walletView" style="display:none">
+  <h1 id="walletTitle"></h1>
+  <div id="balance">Verfügbar: 0 €</div>
+  <input type="number" id="expenseAmount" placeholder="Ausgabe hinzufügen (€)">
+  <button onclick="addExpenseToCurrentWallet()">Ausgabe speichern</button>
+  <h3>Ausgaben</h3>
+  <ul id="expenseList"></ul>
+  <button onclick="returnToMain()">Zurück</button>
+</div>
 
-    <hr>
+<script>
+let wallets = JSON.parse(localStorage.getItem('wallets')) || [];
+let currentWalletIndex = null;
 
-    <input type="number" id="expenseAmount" placeholder="Ausgabe hinzufügen (€)">
-    <button onclick="addExpense()">Ausgabe speichern</button>
+function saveWallets() {
+  localStorage.setItem('wallets', JSON.stringify(wallets));
+}
 
-    <h3>Ausgaben</h3>
-    <ul id="expenseList"></ul>
-  </div>
-
-  <script>
-    let balance = 0;
-    let expenses = [];
-
-    function loadFromStorage() {
-      balance = parseFloat(localStorage.getItem('balance')) || 0;
-      expenses = JSON.parse(localStorage.getItem('expenses')) || [];
-      updateDisplay();
+function createWallet() {
+  const name = prompt("Name des neuen Geldbeutels:");
+  if (name) {
+    const amount = parseFloat(prompt("Startbetrag (€):"));
+    if (!isNaN(amount)) {
+      wallets.push({ name: name, balance: amount, expenses: [] });
+      saveWallets();
+      renderWalletList();
     }
+  }
+}
 
-    function saveToStorage() {
-      localStorage.setItem('balance', balance);
-      localStorage.setItem('expenses', JSON.stringify(expenses));
+function renderWalletList() {
+  const list = document.getElementById('walletList');
+  list.innerHTML = '';
+  wallets.forEach((wallet, index) => {
+    const item = document.createElement('div');
+    item.className = 'wallet-item';
+    item.innerHTML = `
+      <span onclick="openWallet(${index})">${wallet.name} (${wallet.balance.toFixed(2)} €)</span>
+      <span class="wallet-controls">
+        <button onclick="editWallet(${index})">⚙️</button>
+      </span>`;
+    list.appendChild(item);
+  });
+}
+
+function editWallet(index) {
+  const wallet = wallets[index];
+  const newName = prompt("Neuer Name:", wallet.name);
+  const newBalance = parseFloat(prompt("Neuer Betrag:", wallet.balance));
+  if (newName && !isNaN(newBalance)) {
+    wallet.name = newName;
+    wallet.balance = newBalance;
+    saveWallets();
+    renderWalletList();
+  }
+}
+
+function openWallet(index) {
+  currentWalletIndex = index;
+  const wallet = wallets[index];
+  document.getElementById('walletTitle').textContent = wallet.name;
+  updateWalletView();
+  document.getElementById('mainMenu').style.display = 'none';
+  document.getElementById('walletView').style.display = 'block';
+}
+
+function updateWalletView() {
+  const wallet = wallets[currentWalletIndex];
+  document.getElementById('balance').textContent = `Verfügbar: ${wallet.balance.toFixed(2)} €`;
+  const list = document.getElementById('expenseList');
+  list.innerHTML = '';
+  wallet.expenses.forEach((ex, idx) => {
+    const li = document.createElement('li');
+    li.textContent = `#${idx + 1}: -${ex.amount.toFixed(2)} € am ${ex.time}`;
+    list.appendChild(li);
+  });
+}
+
+function addExpenseToCurrentWallet() {
+  const amount = parseFloat(document.getElementById('expenseAmount').value);
+  if (!isNaN(amount) && amount > 0) {
+    const wallet = wallets[currentWalletIndex];
+    if (wallet.balance - amount >= 0) {
+      wallet.balance -= amount;
+      const now = new Date();
+      wallet.expenses.push({ amount: amount, time: now.toLocaleString() });
+      saveWallets();
+      updateWalletView();
     }
+  }
+}
 
-    function setStartAmount() {
-      const amount = parseFloat(document.getElementById('startAmount').value);
-      if (!isNaN(amount)) {
-        balance = amount;
-        expenses = [];
-        saveToStorage();
-        updateDisplay();
-      }
-    }
+function returnToMain() {
+  currentWalletIndex = null;
+  document.getElementById('walletView').style.display = 'none';
+  document.getElementById('mainMenu').style.display = 'block';
+  renderWalletList();
+}
 
-    function addExpense() {
-      const amount = parseFloat(document.getElementById('expenseAmount').value);
-      if (!isNaN(amount) && amount > 0 && balance - amount >= 0) {
-        balance -= amount;
-        const now = new Date();
-        const timestamp = now.toLocaleString();
-        expenses.push({ amount: amount, time: timestamp });
-        saveToStorage();
-        updateDisplay();
-      }
-    }
-
-    function updateDisplay() {
-      document.getElementById('balance').textContent = `Verfügbar: ${balance.toFixed(2)} €`;
-      const list = document.getElementById('expenseList');
-      list.innerHTML = '';
-      expenses.forEach((ex, idx) => {
-        const li = document.createElement('li');
-        li.textContent = `#${idx + 1}: -${ex.amount.toFixed(2)} € am ${ex.time}`;
-        list.appendChild(li);
-      });
-    }
-
-    loadFromStorage();
-  </script>
+renderWalletList();
+</script>
 </body>
 </html>
