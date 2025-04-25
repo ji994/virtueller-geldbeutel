@@ -139,6 +139,7 @@ function updateWalletView() {
   wallet.expenses.forEach((ex, idx) => {
     const li = document.createElement('li');
     li.textContent = `${idx + 1}.: ${ex.title} (${ex.time})`;
+    li.onclick = () => editExpense(idx);
     list.appendChild(li);
   });
 }
@@ -155,6 +156,23 @@ function addExpenseToCurrentWallet() {
       saveWallets();
       updateWalletView();
     }
+  }
+}
+
+function editExpense(index) {
+  const wallet = wallets[currentWalletIndex];
+  const expense = wallet.expenses[index];
+  const newTitle = prompt("Neuer Titel:", expense.title);
+  const newAmount = parseFloat(prompt("Neuer Betrag (€):", expense.amount));
+  if (newTitle && !isNaN(newAmount)) {
+    wallet.balance += expense.amount; // Rückgutschrift des alten Betrags
+    wallet.balance -= newAmount;     // Abzug des neuen Betrags
+    const now = new Date();
+    expense.title = newTitle;
+    expense.amount = newAmount;
+    expense.time = now.toLocaleString();
+    saveWallets();
+    updateWalletView();
   }
 }
 
